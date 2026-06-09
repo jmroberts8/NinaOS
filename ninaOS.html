@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e0e10">
+<title>Nina — Daily Emotional Chaos Tracker</title>
+
+<style>
+  /* ─── Variables ─────────────────────────────────── */
+  :root {
+    --blue:      #1F8FFF;
+    --blue-dim:  #1F8FFF33;
+    --bg:        #0e0e10;
+    --card:      #1c1c20;
+    --card2:     #242428;
+    --border:    #2a2a30;
+    --text:      #f0f0f2;
+    --sub:       #8a8a96;
+    --danger:    #ff4560;
+    --good:      #4cd964;
+    --warn:      #ffcc00;
+    --radius:    18px;
+    --tab-h:     72px;
+    --safe-b:    env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ─── Reset ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  /* ─── Layout ─────────────────────────────────────── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 430px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(var(--tab-h) + var(--safe-b) + 16px);
+  }
+
+  /* ─── Tab Bar ────────────────────────────────────── */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    height: calc(var(--tab-h) + var(--safe-b));
+    padding-bottom: var(--safe-b);
+    background: rgba(14,14,16,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    z-index: 100;
+  }
+
+  .tab-btn {
+    flex: 1;
+    height: var(--tab-h);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--sub);
+    transition: color .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-btn.active { color: var(--blue); }
+  .tab-btn svg { width: 22px; height: 22px; }
+  .tab-btn span { font-size: 10px; font-weight: 600; letter-spacing: .3px; }
+
+  /* ─── Pages ──────────────────────────────────────── */
+  .page { display: none; padding: 0 16px; }
+  .page.active { display: block; }
+
+  .page-header {
+    padding: 20px 0 8px;
+    text-align: center;
+  }
+  .page-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    color: var(--text);
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--sub);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  /* ─── Streak Badge ───────────────────────────────── */
+  .streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px 6px 10px;
+    margin: 0 auto 16px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+  .streak-badge .streak-num { font-size: 18px; font-weight: 900; }
+
+  /* ─── Already-Checked-In State ───────────────────── */
+  .done-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    margin: 12px 0;
+    text-align: center;
+  }
+  .done-card .done-emoji { font-size: 40px; margin-bottom: 8px; }
+  .done-card .done-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .done-card .done-mood { font-size: 14px; color: var(--sub); }
+  .done-card .done-mood strong { color: var(--blue); }
+
+  .view-response-btn {
+    margin-top: 14px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .view-response-btn:active { opacity: .75; }
+
+  /* ─── Mood Buttons ───────────────────────────────── */
+  .mood-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 0 16px;
+  }
+
+  .mood-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: border-color .15s, background .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .mood-btn:active { transform: scale(.97); }
+  .mood-btn.selected {
+    border-color: var(--blue);
+    background: var(--blue-dim);
+  }
+
+  .mood-emoji { font-size: 28px; flex-shrink: 0; }
+  .mood-info { flex: 1; }
+  .mood-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .mood-sub {
+    font-size: 12px;
+    color: var(--sub);
+    margin-top: 2px;
+  }
+  .mood-arrow {
+    color: var(--sub);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Mode Toggle ────────────────────────────────── */
+  .mode-row {
+    display: flex;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    gap: 12px;
+  }
+  .mode-row-info { flex: 1; }
+  .mode-row-label { font-size: 15px; font-weight: 700; }
+  .mode-row-desc { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+  .toggle-switch {
+    width: 50px;
+    height: 28px;
+    background: var(--border);
+    border-radius: 100px;
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+    border: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .toggle-switch.on { background: var(--blue); }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 22px; height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  }
+  .toggle-switch.on::after { transform: translateX(22px); }
+
+  /* ─── History ────────────────────────────────────── */
+  .big-streak-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .streak-icon { font-size: 40px; }
+  .streak-info { flex: 1; }
+  .streak-number {
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--blue);
+    line-height: 1;
+  }
+  .streak-label { font-size: 12px; color: var(--sub); text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+  .streak-since { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sub);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-bottom: 12px;
+  }
+  #moodChart {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .history-list { margin-bottom: 20px; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-emoji { font-size: 22px; width: 30px; text-align: center; }
+  .history-info { flex: 1; }
+  .history-label { font-size: 14px; font-weight: 600; }
+  .history-date { font-size: 12px; color: var(--sub); }
+  .history-score {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--sub);
+  }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .empty-state p { font-size: 14px; line-height: 1.5; }
+
+  /* ─── Settings Page ──────────────────────────────── */
+  .settings-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sub);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 20px 0 8px;
+  }
+
+  .danger-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--card);
+    border: 1.5px solid var(--danger);
+    border-radius: var(--radius);
+    color: var(--danger);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 8px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s;
+  }
+  .danger-btn:active { background: rgba(255,69,96,.12); }
+
+  .version-note {
+    text-align: center;
+    font-size: 12px;
+    color: var(--sub);
+    padding: 20px 0;
+    font-style: italic;
+  }
+
+  /* ─── Response Modal ─────────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    z-index: 200;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal-sheet {
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    background: var(--card);
+    border-radius: 28px 28px 0 0;
+    padding: 0 20px calc(var(--safe-b) + 32px);
+    max-height: 90dvh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform .35s cubic-bezier(.32,.72,0,1);
+  }
+  .modal-overlay.open .modal-sheet { transform: translateY(0); }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px auto 0;
+  }
+
+  .modal-mood-label {
+    text-align: center;
+    font-size: 42px;
+    margin: 16px 0 4px;
+  }
+  .modal-mood-name {
+    text-align: center;
+    font-size: 14px;
+    color: var(--sub);
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+
+  .response-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--blue);
+    margin-bottom: 14px;
+  }
+
+  .response-text {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--card2);
+    border-radius: 16px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .response-text.nina-style {
+    font-size: 22px;
+    font-weight: 800;
+    text-align: center;
+    padding: 28px 18px;
+    color: var(--blue);
+    line-height: 1.3;
+  }
+
+  .modal-done-btn {
+    width: 100%;
+    padding: 17px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-bottom: 8px;
+    box-shadow: 0 6px 24px rgba(31,143,255,.35);
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity .15s;
+  }
+  .modal-done-btn:active { opacity: .8; }
+
+  .modal-switch-mode-btn {
+    width: 100%;
+    padding: 13px;
+    background: transparent;
+    color: var(--sub);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal-switch-mode-btn:active { background: var(--card2); }
+
+  /* ─── Ripple animation ───────────────────────────── */
+  @keyframes ripple {
+    from { transform: scale(0); opacity: .3; }
+    to   { transform: scale(4); opacity: 0; }
+  }
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--blue);
+    width: 60px; height: 60px;
+    margin-top: -30px; margin-left: -30px;
+    pointer-events: none;
+    animation: ripple .5s linear;
+  }
+
+  /* ─── Scrollbar ──────────────────────────────────── */
+  ::-webkit-scrollbar { width: 0; }
+
+  /* ─── Desktop centering ──────────────────────────── */
+  @media (min-width: 430px) {
+    .tab-bar { border-radius: 0; }
+    .modal-sheet { border-radius: 28px 28px 0 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="scroll-area" id="scrollArea">
+
+    <!-- ═══════════════════════ TODAY PAGE ═══════════════════════ -->
+    <div class="page active" id="page-today">
+      <div class="page-header">
+        <div class="page-title">How are you today?</div>
+        <div class="page-subtitle" id="today-subtitle">Be honest. Sarcasm pending.</div>
+      </div>
+
+      <div style="text-align:center; margin-bottom:4px;">
+        <div class="streak-badge">
+          <span>🔥</span>
+          <span class="streak-num" id="streakNum">0</span>
+          <span id="streakDayWord">days</span>
+        </div>
+      </div>
+
+      <!-- Shown if NOT yet checked in today -->
+      <div id="moodSelector">
+        <div class="mood-list" id="moodList"></div>
+      </div>
+
+      <!-- Shown if ALREADY checked in today -->
+      <div id="alreadyDone" style="display:none;">
+        <div class="done-card">
+          <div class="done-emoji" id="doneEmoji">😐</div>
+          <div class="done-title">Done for today.</div>
+          <div class="done-mood">You logged: <strong id="doneMoodLabel">Meh</strong></div>
+          <button class="view-response-btn" onclick="replayResponse()">See Nina's take →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ HISTORY PAGE ══════════════════════ -->
+    <div class="page" id="page-history">
+      <div class="page-header">
+        <div class="page-title">The Evidence</div>
+        <div class="page-subtitle">Data doesn't lie. It judges.</div>
+      </div>
+
+      <div class="big-streak-card">
+        <div class="streak-icon" id="histStreakIcon">💤</div>
+        <div class="streak-info">
+          <div class="streak-number" id="histStreakNum">0</div>
+          <div class="streak-label" id="histStreakLabel">Good Days</div>
+          <div class="streak-since" id="histStreakSince">No check-ins yet.</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Last 14 Days</div>
+        <canvas id="moodChart" height="120"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Recent Entries</div>
+        <div class="history-list" id="historyList">
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No entries yet.<br>Check in today — the graph is waiting.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ SETTINGS PAGE ════════════════════ -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <div class="page-subtitle">Light customisation. Heavy sarcasm.</div>
+      </div>
+
+      <div class="settings-section-title">Personality Mode</div>
+
+      <div class="mode-row">
+        <div class="mode-row-info">
+          <div class="mode-row-label" id="modeName">Jonathan Mode</div>
+          <div class="mode-row-desc" id="modeDesc">Anxious, verbose, emotionally overwhelmed.</div>
+        </div>
+        <button class="toggle-switch" id="modeToggle" onclick="toggleMode()" aria-label="Toggle mode"></button>
+      </div>
+
+      <div class="mode-row" style="flex-direction:column; align-items:flex-start;">
+        <div class="mode-row-info" style="margin-bottom:8px;">
+          <div class="mode-row-label">Jonathan Mode</div>
+          <div class="mode-row-desc">Long, spiralling, deeply personal monologues about your mood. He means well.</div>
+        </div>
+        <div class="mode-row-info">
+          <div class="mode-row-label">Nina Mode</div>
+          <div class="mode-row-desc">2–5 words. Blunt. No follow-up. Somehow worse.</div>
+        </div>
+      </div>
+
+      <div class="settings-section-title">Data</div>
+
+      <button class="danger-btn" onclick="confirmReset()">🗑 Reset All Data</button>
+
+      <div class="version-note">
+        Nina Web v1.0 — self-contained, offline-capable.<br>
+        Data lives in your browser's localStorage.
+      </div>
+    </div>
+
+  </div><!-- /scroll-area -->
+
+  <!-- ═══════════════════════ TAB BAR ═══════════════════════════ -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-today" onclick="switchTab('today')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+      </svg>
+      <span>Today</span>
+    </button>
+    <button class="tab-btn" id="tab-btn-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      <span>History</span>
+    </button>
+    <button class="tab-btn" id="tab-btn-settings" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ═══════════════════════ RESPONSE MODAL ════════════════════════ -->
+<div class="modal-overlay" id="responseModal" onclick="handleModalBgClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-mood-label" id="modalMoodEmoji">😐</div>
+    <div class="modal-mood-name" id="modalMoodName">Meh</div>
+
+    <div style="text-align:center;">
+      <div class="response-mode-badge" id="modeBadge">Jonathan Mode</div>
+    </div>
+
+    <div class="response-text" id="responseText">Loading...</div>
+
+    <button class="modal-done-btn" onclick="closeModal()">Done</button>
+    <button class="modal-switch-mode-btn" id="switchModeBtn" onclick="switchResponseMode()">
+      Switch to Nina Mode →
+    </button>
+  </div>
+</div>
+
+<script>
+// ═════════════════════════════════════════════════════
+//  DATA LAYER — localStorage schema
+//  { entries: [{date:"YYYY-MM-DD", mood:"Meh", score:3, timestamp:epoch}] }
+//  { settings: {isJonathan:true} }
+// ═════════════════════════════════════════════════════
+
+const STORAGE_KEY  = 'nina_entries_v1';
+const SETTINGS_KEY = 'nina_settings_v1';
+
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveEntries(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { isJonathan: true }; }
+  catch { return { isJonathan: true }; }
+}
+
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function formatRelativeDate(dateStr) {
+  const today  = todayStr();
+  const yest   = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (dateStr === today) return 'Today';
+  if (dateStr === yest)  return 'Yesterday';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// ═════════════════════════════════════════════════════
+//  MOOD DATA
+// ═════════════════════════════════════════════════════
+
+const MOODS = [
+  { label: 'Thriving',                   emoji: '🌟', score: 5, sub: 'Actually good. Don\'t question it.' },
+  { label: 'Good',                        emoji: '😊', score: 4, sub: 'Solidly okay. The bar is cleared.' },
+  { label: 'Meh',                         emoji: '😐', score: 3, sub: 'Functional. Technically.' },
+  { label: 'Struggling',                  emoji: '😟', score: 2, sub: 'Rough. But you\'re still here.' },
+  { label: 'Barely Holding It Together', emoji: '😩', score: 1, sub: 'The phrase says it all.' },
+];
+
+function moodByLabel(label) {
+  return MOODS.find(m => m.label === label) || MOODS[2];
+}
+
+function scoreColor(score) {
+  const colors = { 5:'#4cd964', 4:'#34aadc', 3:'#ffcc00', 2:'#ff9500', 1:'#ff3b30' };
+  return colors[score] || '#888';
+}
+
+// ═════════════════════════════════════════════════════
+//  RESPONSE CONTENT
+//  Pre-written; no internet needed.
+// ═════════════════════════════════════════════════════
+
+const JONATHAN = {
+  'Thriving': `Oh. You're thriving? That's — I mean, yes. Good. Great, actually. I just want to make sure we're being honest with ourselves here, because last week you were "meh" and now we're "thriving" and I'm not saying that's suspicious but the jump is — look, I'm proud of you. I just want us to stay grounded. What does thriving mean, exactly? Are we sleeping? Are we hydrating? I have some follow-up questions but you don't have to answer them. I'll just sit with them quietly. Like I do with everything.`,
+
+  'Good': `Good. That's — good. I'm glad to hear that. I'm trying not to spiral into "but what does good mean" territory but you should know I'm keeping an eye on things. Good is a foundational mood. It's reliable. It's what you build on. Are you building on it? You don't have to answer that. But if you wanted to, I'm here. I'm always here. That's not meant to be ominous. It's meant to be supportive. I'm going to think about how I said that later.`,
+
+  'Meh': `Meh. Right. I know meh. Meh and I have a long history. Meh is when everything is technically fine but nothing is landing the way it's supposed to. It's the emotional equivalent of a waiting room. You're not suffering, but you're also not anywhere. I want you to know that meh is valid — genuinely valid — I'm just hoping meh doesn't unpack and get too comfortable. It has a tendency to do that. I'm not saying it will. I'm just... monitoring.`,
+
+  'Struggling': `Okay. Okay. I'm glad you told me. Struggling is hard to say out loud — even to an app — and the fact that you said it means something. I'm not going to make it worse by listing everything that could help, because you already know them and sometimes being told to drink water when you're struggling is genuinely offensive. So I'll just say: I see it. It's real. And we'll keep checking in. Every day. That's the whole thing. We just keep going.`,
+
+  'Barely Holding It Together': `I know. I know. That phrase — "barely holding it together" — I know what it costs to say it. Everything is technically still in one piece but you're the one holding all of it and it is a lot and no one seems to notice how much energy that takes. I notice. This app notices. You don't have to perform okay right now. You just have to exist. That's the whole assignment today. Exist. Check in tomorrow. We'll take it from there.`,
+};
+
+const NINA = {
+  'Thriving':                   'Don\'t jinx it.',
+  'Good':                        'Fine. Keep going.',
+  'Meh':                         'Meh. Same, honestly.',
+  'Struggling':                  'Yeah. That tracks.',
+  'Barely Holding It Together': 'Still here. That counts.',
+};
+
+// ═════════════════════════════════════════════════════
+//  STATE
+// ═════════════════════════════════════════════════════
+
+let entries   = loadEntries();
+let settings  = loadSettings();
+let currentMoodForModal = null; // mood object currently shown in modal
+
+// ═════════════════════════════════════════════════════
+//  STREAK CALCULATION
+// ═════════════════════════════════════════════════════
+
+function calcStreak(ents) {
+  if (!ents.length) return 0;
+  const sorted = [...ents].sort((a,b) => b.date.localeCompare(a.date));
+  const today  = todayStr();
+  let streak   = 0;
+  let cursor   = today;
+
+  for (const e of sorted) {
+    if (e.date === cursor) {
+      streak++;
+      const d = new Date(cursor + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      cursor = d.toISOString().slice(0, 10);
+    } else if (e.date < cursor) {
+      break;
+    }
+  }
+  return streak;
+}
+
+// ═════════════════════════════════════════════════════
+//  TABS
+// ═════════════════════════════════════════════════════
+
+function switchTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+  document.getElementById('scrollArea').scrollTop = 0;
+
+  if (name === 'history') renderHistory();
+  if (name === 'settings') renderSettings();
+  vibrate(8);
+}
+
+// ═════════════════════════════════════════════════════
+//  TODAY PAGE RENDER
+// ═════════════════════════════════════════════════════
+
+function renderToday() {
+  const streak     = calcStreak(entries);
+  const streakNum  = document.getElementById('streakNum');
+  const streakWord = document.getElementById('streakDayWord');
+  if (streakNum)  streakNum.textContent  = streak;
+  if (streakWord) streakWord.textContent = streak === 1 ? 'day' : 'days';
+
+  const todayEntry = entries.find(e => e.date === todayStr());
+  const selector   = document.getElementById('moodSelector');
+  const doneDiv    = document.getElementById('alreadyDone');
+  const subtitle   = document.getElementById('today-subtitle');
+
+  if (todayEntry) {
+    const mood = moodByLabel(todayEntry.mood);
+    selector.style.display = 'none';
+    doneDiv.style.display  = 'block';
+    document.getElementById('doneEmoji').textContent    = mood.emoji;
+    document.getElementById('doneMoodLabel').textContent = todayEntry.mood;
+    subtitle.textContent = 'You\'ve checked in today. That\'s the bar. You cleared it.';
+  } else {
+    selector.style.display = 'block';
+    doneDiv.style.display  = 'none';
+    subtitle.textContent   = 'Be honest. Sarcasm pending.';
+  }
+}
+
+function buildMoodList() {
+  const list = document.getElementById('moodList');
+  list.innerHTML = '';
+  MOODS.forEach(mood => {
+    const btn = document.createElement('button');
+    btn.className = 'mood-btn';
+    btn.innerHTML = `
+      <span class="mood-emoji">${mood.emoji}</span>
+      <span class="mood-info">
+        <span class="mood-label">${mood.label}</span>
+        <span class="mood-sub">${mood.sub}</span>
+      </span>
+      <span class="mood-arrow">›</span>`;
+    btn.addEventListener('click', (e) => {
+      addRipple(btn, e);
+      vibrate(10);
+      selectMood(mood);
+    });
+    list.appendChild(btn);
+  });
+}
+
+function selectMood(mood) {
+  // Animate the selected button
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  // log entry
+  const todayEntry = entries.find(e => e.date === todayStr());
+  if (!todayEntry) {
+    entries.push({ date: todayStr(), mood: mood.label, score: mood.score, timestamp: Date.now() });
+    saveEntries(entries);
+  }
+  // show response
+  currentMoodForModal = mood;
+  openModal(mood, settings.isJonathan);
+  // update today view (will show done card after modal closes)
+}
+
+function replayResponse() {
+  const todayEntry = entries.find(e => e.date === todayStr());
+  if (!todayEntry) return;
+  currentMoodForModal = moodByLabel(todayEntry.mood);
+  openModal(currentMoodForModal, settings.isJonathan);
+}
+
+// ═════════════════════════════════════════════════════
+//  RESPONSE MODAL
+// ═════════════════════════════════════════════════════
+
+function openModal(mood, isJonathan) {
+  document.getElementById('modalMoodEmoji').textContent = mood.emoji;
+  document.getElementById('modalMoodName').textContent  = mood.label;
+  populateResponse(mood, isJonathan);
+
+  const overlay = document.getElementById('responseModal');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  vibrate([15, 10, 20]);
+}
+
+function populateResponse(mood, isJonathan) {
+  const badge     = document.getElementById('modeBadge');
+  const textEl    = document.getElementById('responseText');
+  const switchBtn = document.getElementById('switchModeBtn');
+
+  if (isJonathan) {
+    badge.textContent         = 'Jonathan Mode';
+    textEl.className          = 'response-text';
+    textEl.textContent        = JONATHAN[mood.label] || JONATHAN['Meh'];
+    switchBtn.textContent     = 'Switch to Nina Mode →';
+  } else {
+    badge.textContent         = 'Nina Mode';
+    textEl.className          = 'response-text nina-style';
+    textEl.textContent        = NINA[mood.label] || NINA['Meh'];
+    switchBtn.textContent     = 'Switch to Jonathan Mode →';
+  }
+}
+
+function closeModal() {
+  const overlay = document.getElementById('responseModal');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  renderToday();
+  vibrate(8);
+}
+
+function handleModalBgClick(e) {
+  if (e.target === document.getElementById('responseModal')) closeModal();
+}
+
+function switchResponseMode() {
+  settings.isJonathan = !settings.isJonathan;
+  saveSettings(settings);
+  populateResponse(currentMoodForModal, settings.isJonathan);
+  renderSettings();
+  vibrate(10);
+}
+
+// ═════════════════════════════════════════════════════
+//  HISTORY PAGE
+// ═════════════════════════════════════════════════════
+
+function renderHistory() {
+  const streak     = calcStreak(entries);
+  const todayEntry = entries.find(e => e.date === todayStr());
+
+  document.getElementById('histStreakIcon').textContent = todayEntry ? '🔥' : '💤';
+  document.getElementById('histStreakNum').textContent  = streak;
+  document.getElementById('histStreakLabel').textContent = streak === 1 ? 'Good Day' : 'Good Days';
+
+  if (entries.length === 0) {
+    document.getElementById('histStreakSince').textContent = 'No check-ins yet. The graph is waiting.';
+  } else {
+    const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+    const first  = new Date(sorted[0].date + 'T00:00:00');
+    document.getElementById('histStreakSince').textContent =
+      `Tracking since ${first.toLocaleDateString(undefined, { month:'short', day:'numeric' })}`;
+  }
+
+  drawChart();
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const list = document.getElementById('historyList');
+  if (entries.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>No entries yet.<br>Check in today — the graph is waiting.</p>
+    </div>`;
+    return;
+  }
+
+  const sorted = [...entries].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 30);
+  list.innerHTML = sorted.map(e => {
+    const mood  = moodByLabel(e.mood);
+    const color = scoreColor(mood.score);
+    return `<div class="history-item">
+      <div class="history-emoji">${mood.emoji}</div>
+      <div class="history-info">
+        <div class="history-label">${mood.label}</div>
+        <div class="history-date">${formatRelativeDate(e.date)}</div>
+      </div>
+      <div class="history-score" style="background:${color}22;color:${color};">${mood.score}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═════════════════════════════════════════════════════
+//  CHART — Canvas, 14-day bar chart
+// ═════════════════════════════════════════════════════
+
+function drawChart() {
+  const canvas = document.getElementById('moodChart');
+  if (!canvas) return;
+
+  // Set canvas resolution to match CSS width × 2 for retina
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.parentElement.clientWidth - 32; // 16px padding each side
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = '120px';
+  canvas.width  = cssW * dpr;
+  canvas.height = 120 * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const W = cssW;
+  const H = 120;
+  ctx.clearRect(0, 0, W, H);
+
+  // Build 14-day array
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    days.push(d.toISOString().slice(0, 10));
+  }
+
+  const entryMap = {};
+  entries.forEach(e => { entryMap[e.date] = e; });
+
+  const barCount = 14;
+  const gap      = 4;
+  const barW     = (W - (barCount + 1) * gap) / barCount;
+  const maxScore = 5;
+  const maxBarH  = H - 24; // leave room for day labels
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth   = 1;
+  for (let score = 1; score <= 5; score++) {
+    const y = H - 18 - (score / maxScore) * maxBarH;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+
+  days.forEach((dateStr, i) => {
+    const x = gap + i * (barW + gap);
+    const e = entryMap[dateStr];
+
+    if (e) {
+      const score  = e.score;
+      const barH   = (score / maxScore) * maxBarH;
+      const y      = H - 18 - barH;
+      const isToday = dateStr === todayStr();
+
+      // Gradient bar
+      const grad = ctx.createLinearGradient(0, y, 0, H - 18);
+      const color = scoreColor(score);
+      grad.addColorStop(0,   color + 'ff');
+      grad.addColorStop(1,   color + '44');
+      ctx.fillStyle = grad;
+
+      // Rounded rect
+      const r = Math.min(barW / 2, 5);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + barW - r, y);
+      ctx.quadraticCurveTo(x + barW, y, x + barW, y + r);
+      ctx.lineTo(x + barW, H - 18);
+      ctx.lineTo(x, H - 18);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Glow on today
+      if (isToday) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur  = 8;
+        ctx.fill();
+        ctx.shadowBlur  = 0;
+      }
+    } else {
+      // No entry — dashed empty bar
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(x, H - 22, barW, 4);
+      ctx.setLineDash([]);
+    }
+
+    // Day label (Mon, Tue, etc.) every 3rd bar, or today
+    const d        = new Date(dateStr + 'T00:00:00');
+    const isToday  = dateStr === todayStr();
+    const showLabel = (i % 3 === 0) || isToday;
+
+    if (showLabel) {
+      ctx.fillStyle  = isToday ? '#1F8FFF' : 'rgba(255,255,255,0.3)';
+      ctx.font       = `${isToday ? '700' : '400'} 9px -apple-system, sans-serif`;
+      ctx.textAlign  = 'center';
+      ctx.fillText(
+        isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }),
+        x + barW / 2,
+        H - 4
+      );
+    }
+  });
+}
+
+// ═════════════════════════════════════════════════════
+//  SETTINGS PAGE
+// ═════════════════════════════════════════════════════
+
+function renderSettings() {
+  const toggle = document.getElementById('modeToggle');
+  const name   = document.getElementById('modeName');
+  const desc   = document.getElementById('modeDesc');
+
+  if (settings.isJonathan) {
+    toggle.classList.add('on');
+    name.textContent = 'Jonathan Mode';
+    desc.textContent = 'Anxious, verbose, emotionally overwhelmed.';
+  } else {
+    toggle.classList.remove('on');
+    name.textContent = 'Nina Mode';
+    desc.textContent = 'Blunt. 2–5 words. No follow-up.';
+  }
+}
+
+function toggleMode() {
+  settings.isJonathan = !settings.isJonathan;
+  saveSettings(settings);
+  renderSettings();
+  vibrate(10);
+}
+
+function confirmReset() {
+  vibrate([10, 20, 10]);
+  const ok = confirm('Reset all mood data? This cannot be undone.\n\nThe graph will be very sad about it.');
+  if (ok) {
+    entries = [];
+    saveEntries(entries);
+    renderToday();
+    vibrate([30, 10, 30]);
+    alert('All data cleared. Fresh start. The graph is an empty void. Very on-brand.');
+  }
+}
+
+// ═════════════════════════════════════════════════════
+//  UTILITIES
+// ═════════════════════════════════════════════════════
+
+function vibrate(pattern) {
+  try {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  } catch {}
+}
+
+function addRipple(btn, e) {
+  const rect = btn.getBoundingClientRect();
+  const x    = e.clientX - rect.left;
+  const y    = e.clientY - rect.top;
+  const el   = document.createElement('span');
+  el.className     = 'ripple';
+  el.style.left    = x + 'px';
+  el.style.top     = y + 'px';
+  btn.appendChild(el);
+  setTimeout(() => el.remove(), 600);
+}
+
+// ═════════════════════════════════════════════════════
+//  INIT
+// ═════════════════════════════════════════════════════
+
+function init() {
+  buildMoodList();
+  renderToday();
+  renderSettings();
+
+  // Redraw chart on window resize
+  window.addEventListener('resize', () => {
+    if (document.getElementById('page-history').classList.contains('active')) drawChart();
+  });
+}
+
+init();
+</script>
+</body>
+</html>
